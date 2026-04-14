@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wheel of Names</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1828;
+    --surface2: #232136;
+    --accent: #f4c430;
+    --accent2: #ff6b6b;
+    --text: #fffffe;
+    --muted: #a7a9be;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+    gap: 28px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(244,196,48,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(244,196,48,0.3);
+    text-align: center;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: -20px;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── SETUP PANEL ── */
+  #setup {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  #setup h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+  }
+
+  #setup p {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  textarea {
+    background: var(--surface2);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    padding: 12px 14px;
+    resize: vertical;
+    min-height: 140px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); opacity: 0.6; }
+
+  .btn {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.1em;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 12px 28px;
+    transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--accent);
+    color: #0f0e17;
+  }
+  .btn-primary:hover { box-shadow: 0 0 24px rgba(244,196,48,0.4); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid rgba(255,255,255,0.15);
+    font-size: 0.95rem;
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.03em;
+    font-weight: 500;
+  }
+  .btn-secondary:hover { border-color: var(--muted); color: var(--text); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── WHEEL SECTION ── */
+  #wheel-section {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    max-width: 520px;
+  }
+
+  .wheel-wrap {
+    position: relative;
+    width: min(340px, 88vw);
+    height: min(340px, 88vw);
+    flex-shrink: 0;
+  }
+
+  canvas#wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    filter: drop-shadow(0 0 30px rgba(244,196,48,0.2));
+  }
+
+  /* pointer/arrow */
+  .pointer {
+    position: absolute;
+    top: 50%;
+    right: -18px;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    border-right: 30px solid var(--accent);
+    filter: drop-shadow(0 0 6px rgba(244,196,48,0.7));
+    z-index: 10;
+  }
+
+  /* centre button overlay */
+  .spin-btn-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #0f0e17;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    border: 4px solid var(--bg);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: box-shadow 0.2s, transform 0.1s;
+    z-index: 20;
+    box-shadow: 0 0 0 3px rgba(244,196,48,0.3);
+  }
+  .spin-btn-overlay:hover { box-shadow: 0 0 0 6px rgba(244,196,48,0.25); }
+  .spin-btn-overlay:active { transform: translate(-50%,-50%) scale(0.94); }
+  .spin-btn-overlay:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── RESULT ── */
+  #result-box {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius);
+    padding: 18px 24px;
+    width: 100%;
+    text-align: center;
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  #result-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  #result-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  #result-name.show { opacity: 1; transform: scale(1); }
+
+  /* ── REMAINING LIST ── */
+  #remaining-section {
+    width: 100%;
+    max-width: 520px;
+  }
+
+  #remaining-section h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  #names-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .name-chip {
+    background: var(--surface2);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.82rem;
+    color: var(--text);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+
+  .name-chip.removing {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ── PROGRESS ── */
+  .progress-line {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  .progress-line span { color: var(--accent); font-weight: 500; }
+
+  /* ── ALL DONE ── */
+  #all-done {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 32px;
+    text-align: center;
+  }
+  #all-done .done-icon {
+    font-size: 3.5rem;
+    animation: pop 0.4s ease;
+  }
+  #all-done h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+  #all-done p { color: var(--muted); }
+
+  @keyframes pop {
+    0% { transform: scale(0); }
+    70% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes tick {
+    0%,100% { transform: translateY(-50%) rotate(0deg); }
+    25% { transform: translateY(-50%) rotate(-8deg); }
+    75% { transform: translateY(-50%) rotate(8deg); }
+  }
+  .pointer.ticking { animation: tick 0.08s linear infinite; }
+</style>
+</head>
+<body>
+
+<h1>🎡 Wheel of Names</h1>
+<p class="subtitle">Spin to find out who's next!</p>
+
+<!-- SETUP -->
+<div id="setup">
+  <h2>Names</h2>
+  <p>Add or edit names below, one per line.</p>
+  <textarea id="names-input">Tayla
+Lucia
+Clare
+Andie
+Lydia
+Elisavet</textarea>
+  <button class="btn btn-primary" onclick="startWheel()">Start Spinning →</button>
+</div>
+
+<!-- WHEEL -->
+<div id="wheel-section">
+  <div class="wheel-wrap">
+    <canvas id="wheel" width="600" height="600"></canvas>
+    <div class="pointer" id="pointer"></div>
+    <button class="spin-btn-overlay" id="spin-btn" onclick="spin()">SPIN</button>
+  </div>
+
+  <div id="result-box">
+    <div id="result-label">Spin to reveal</div>
+    <div id="result-name"></div>
+  </div>
+
+  <div class="progress-line" id="progress-line"></div>
+
+  <div id="remaining-section">
+    <h3>Remaining</h3>
+    <div id="names-list"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-secondary" onclick="resetAll()">↺ Reset</button>
+    <button class="btn btn-secondary" onclick="editNames()">✎ Edit Names</button>
+  </div>
+</div>
+
+<!-- ALL DONE -->
+<div id="all-done">
+  <div class="done-icon">🎉</div>
+  <h2>All Done!</h2>
+  <p>Every name has been picked.</p>
+  <button class="btn btn-primary" onclick="resetAll()">↺ Start Over</button>
+</div>
+
+<script>
+// ── State ──
+let orderedNames = [];
+let remaining = [];
+let spinning = false;
+let spinIndex = 0;
+
+// ── Palette ──
+const PALETTE = [
+  '#e63946','#f4a261','#2a9d8f','#457b9d','#e9c46a',
+  '#6a4c93','#1982c4','#ff595e','#52b788','#d62828',
+  '#f72585','#4361ee','#4cc9f0','#7209b7','#3a0ca3'
+];
+
+function colorFor(i) { return PALETTE[i % PALETTE.length]; }
+
+// ── Draw wheel ──
+function drawWheel(names, highlightIdx = -1) {
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+  const cx = 300, cy = 300, r = 290;
+  const n = names.length;
+  ctx.clearRect(0, 0, 600, 600);
+
+  if (n === 0) return;
+
+  const slice = (2 * Math.PI) / n;
+
+  names.forEach((name, i) => {
+    const start = i * slice - Math.PI / 2;
+    const end = start + slice;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = colorFor(i);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // text
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + slice / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 4;
+    const fontSize = Math.max(11, Math.min(22, Math.floor(280 / n)));
+    ctx.font = `bold ${fontSize}px "DM Sans", sans-serif`;
+    const maxLen = 16;
+    const label = name.length > maxLen ? name.slice(0, maxLen - 1) + '…' : name;
+    ctx.fillText(label, r - 18, fontSize / 3);
+    ctx.restore();
+  });
+
+  // centre circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, 36, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0f0e17';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// ── Spin logic ──
+// The wheel visually rotates to land on a random-looking position,
+// but we ensure the segment under the pointer (right side, 0°) is the intended one.
+
+let currentRotation = 0; // in radians, cumulative
+
+function spin() {
+  if (spinning || remaining.length === 0) return;
+  spinning = true;
+  document.getElementById('spin-btn').disabled = true;
+
+  const winnerName = remaining[0]; // always pick first = ordered pick
+  const n = remaining.length;
+  const slice = (2 * Math.PI) / n;
+
+  // The winner is currently at index 0. With currentRotation applied,
+  // segment i starts at: i*slice - π/2 + currentRotation
+  // We want segment 0 to be centred at the right side pointer (angle = 0).
+  // Centre of segment 0 (before extra rotation): -π/2 + slice/2
+  // We need: -π/2 + slice/2 + currentRotation + extraSpin ≡ 0  (mod 2π)
+  // => extraSpin ≡ π/2 - slice/2 - currentRotation
+  // Add several full rotations (5–8) for drama.
+
+  const fullSpins = (5 + Math.floor(Math.random() * 4)) * 2 * Math.PI;
+  const targetAngle = Math.PI / 2 - slice / 2 - currentRotation;
+  // Normalize so we always spin forward
+  let extra = ((targetAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  if (extra < 0.3) extra += 2 * Math.PI; // avoid near-zero
+  const totalSpin = fullSpins + extra;
+
+  const duration = 4000 + Math.random() * 1000;
+  const startTime = performance.now();
+  const startRot = currentRotation;
+
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+
+  function easeOut(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  const pointer = document.getElementById('pointer');
+
+  function frame(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const rot = startRot + totalSpin * easeOut(t);
+
+    // tick pointer near end
+    if (t > 0.85 && t < 0.99) {
+      pointer.classList.add('ticking');
+    } else {
+      pointer.classList.remove('ticking');
+    }
+
+    drawWheelRotated(remaining, rot);
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      currentRotation = (startRot + totalSpin) % (2 * Math.PI);
+      pointer.classList.remove('ticking');
+      onSpinEnd(winnerName);
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+
+function drawWheelRotated(names, rotation) {
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+  const cx = 300, cy = 300, r = 290;
+  const n = names.length;
+  ctx.clearRect(0, 0, 600, 600);
+
+  if (n === 0) return;
+  const slice = (2 * Math.PI) / n;
+
+  names.forEach((name, i) => {
+    const start = i * slice - Math.PI / 2 + rotation;
+    const end = start + slice;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = colorFor(i);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + slice / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 4;
+    const fontSize = Math.max(11, Math.min(22, Math.floor(280 / n)));
+    ctx.font = `bold ${fontSize}px "DM Sans", sans-serif`;
+    const maxLen = 16;
+    const label = name.length > maxLen ? name.slice(0, maxLen - 1) + '…' : name;
+    ctx.fillText(label, r - 18, fontSize / 3);
+    ctx.restore();
+  });
+
+  // centre
+  ctx.beginPath();
+  ctx.arc(cx, cy, 36, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0f0e17';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function onSpinEnd(winner) {
+  spinning = false;
+  spinIndex++;
+
+  // Show result
+  const rName = document.getElementById('result-name');
+  const rLabel = document.getElementById('result-label');
+  rName.classList.remove('show');
+  rLabel.textContent = '🎯 Selected!';
+  rName.textContent = winner;
+  void rName.offsetWidth;
+  setTimeout(() => rName.classList.add('show'), 50);
+
+  // Remove from remaining (with animation on chip)
+  const chips = document.querySelectorAll('.name-chip');
+  chips.forEach(chip => {
+    if (chip.dataset.name === winner) {
+      chip.classList.add('removing');
+    }
+  });
+
+  setTimeout(() => {
+    remaining.shift();
+
+    if (remaining.length === 0) {
+      // All done!
+      setTimeout(showAllDone, 600);
+    } else {
+      // Reset rotation so next winner (now index 0) lines up fresh
+      currentRotation = 0;
+      renderChips();
+      drawWheel(remaining);
+      updateProgress();
+      document.getElementById('spin-btn').disabled = false;
+    }
+  }, 500);
+}
+
+// ── UI helpers ──
+function renderChips() {
+  const list = document.getElementById('names-list');
+  list.innerHTML = '';
+  const sorted = [...remaining].sort((a, b) => a.localeCompare(b));
+  sorted.forEach((name) => {
+    const chip = document.createElement('div');
+    chip.className = 'name-chip';
+    chip.dataset.name = name;
+    chip.textContent = name;
+    list.appendChild(chip);
+  });
+}
+
+function updateProgress() {
+  const total = orderedNames.length;
+  const done = spinIndex;
+  document.getElementById('progress-line').innerHTML =
+    `<span>${done}</span> of <span>${total}</span> picked`;
+}
+
+function showAllDone() {
+  document.getElementById('wheel-section').style.display = 'none';
+  const ad = document.getElementById('all-done');
+  ad.style.display = 'flex';
+}
+
+// ── Start / Reset ──
+function startWheel() {
+  const raw = document.getElementById('names-input').value.trim();
+  if (!raw) return;
+  const names = raw.split('\n').map(s => s.trim()).filter(Boolean);
+  if (names.length < 2) { alert('Please enter at least 2 names.'); return; }
+
+  orderedNames = [...names];
+  remaining = [...names];
+  spinIndex = 0;
+  currentRotation = 0;
+
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('all-done').style.display = 'none';
+  const ws = document.getElementById('wheel-section');
+  ws.style.display = 'flex';
+
+  // Reset result
+  document.getElementById('result-name').classList.remove('show');
+  document.getElementById('result-name').textContent = '';
+  document.getElementById('result-label').textContent = 'Spin to reveal';
+  document.getElementById('spin-btn').disabled = false;
+
+  renderChips();
+  drawWheel(remaining);
+  updateProgress();
+}
+
+function resetAll() {
+  remaining = [...orderedNames];
+  spinIndex = 0;
+  currentRotation = 0;
+
+  document.getElementById('all-done').style.display = 'none';
+  const ws = document.getElementById('wheel-section');
+  ws.style.display = 'flex';
+
+  document.getElementById('result-name').classList.remove('show');
+  document.getElementById('result-name').textContent = '';
+  document.getElementById('result-label').textContent = 'Spin to reveal';
+  document.getElementById('spin-btn').disabled = false;
+
+  renderChips();
+  drawWheel(remaining);
+  updateProgress();
+}
+
+function editNames() {
+  document.getElementById('wheel-section').style.display = 'none';
+  document.getElementById('setup').style.display = '';
+}
+</script>
+</body>
+</html>
